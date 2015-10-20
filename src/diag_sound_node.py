@@ -66,7 +66,7 @@ if __name__ == "__main__":
     topic_settings = rospy.get_param('~topic_settings', dict())
     exclude_names = topic_settings.get('exclude', list())
     include_names = topic_settings.get('include', list())
-    play_rate = rospy.get_param('~play_rate', 1)
+    play_rate = rospy.get_param('~play_rate', 0.1)
     diagnostic_topic = rospy.get_param('~diagnostic_topic', '/diagnostics_agg')
     cool_mode = rospy.get_param('~cool_mode', False)
     d = AudibleDiagnosticsNode(diagnostic_topic, include_names, exclude_names, play_rate)
