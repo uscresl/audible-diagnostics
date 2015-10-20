@@ -1,7 +1,7 @@
 <launch>
   <node name="soundplay_node" pkg="sound_play" type="soundplay_node.py" output="screen"/>
   <include file="$(find battery_profiler_service)/example/example.launch"/>
-  <node name="diag_sound_node" pkg="diagnostics_sound_play" type="diag_sound_node.py" output="screen">
+  <node name="audible_diagnostics_node" pkg="audible_diagnostics" type="diag_sound_node.py" output="screen">
     <param name="diagnostic_topic" value="diagnostics"/>
     <param name="cool_mode" value="True"/>
   </node>

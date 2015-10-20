@@ -5,7 +5,7 @@ import re
 from sound_play.libsoundplay import SoundClient, SoundRequest
 from diagnostic_msgs.msg import DiagnosticArray
 
-class DiagnosticsSoundNode:
+class AudibleDiagnosticsNode:
     def __init__(self, topic, include_names, exclude_names, play_rate=10):
         self.sound_client = SoundClient()
         self.include_re = [re.compile("^%s.*" % t) for t in include_names]
@@ -69,5 +69,5 @@ if __name__ == "__main__":
     play_rate = rospy.get_param('~play_rate', 1)
     diagnostic_topic = rospy.get_param('~diagnostic_topic', '/diagnostics_agg')
     cool_mode = rospy.get_param('~cool_mode', False)
-    d = DiagnosticsSoundNode(diagnostic_topic, include_names, exclude_names, play_rate)
+    d = AudibleDiagnosticsNode(diagnostic_topic, include_names, exclude_names, play_rate)
     d.spin()

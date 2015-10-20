@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>diagnostics_sound_play</name>
+  <name>audible_diagnostics</name>
   <version>1.0.0</version>
-  <description>The diagnostics_sound_play package</description>
+  <description>The audible_diagnostics package</description>
 
   <maintainer email="vinayrao@usc.edu">vinayrao</maintainer>
 
