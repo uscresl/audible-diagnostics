@@ -6,28 +6,30 @@ from sound_play.libsoundplay import SoundClient, SoundRequest
 from diagnostic_msgs.msg import DiagnosticArray
 
 class AudibleDiagnosticsNode:
+    """Monitors diagnostics and plays audio cues to help easy monitoring"""
     def __init__(self, topic, include_names, exclude_names, play_rate=10):
         self.sound_client = SoundClient()
         self.include_re = [re.compile("^%s.*" % t) for t in include_names]
         self.exclude_re = [re.compile("^%s.*" % t) for t in exclude_names]
         self.check_include = len(self.include_re) != 0
         self.check_exclude = len(self.exclude_re) != 0
-        self.play_rate = play_rate
+        self.play_rate = play_rate  # Frequency at which audio cues are made
         self.subscriber = rospy.Subscriber(topic, DiagnosticArray, self.callback)
         self.latest_status = None
 
     def callback(self, diagnostic_array):
+        """Main callback for diagnostic messages. Updates status of warnings/errors"""
         warnings, errors, stale = 0, 0, 0
-        statuses = list()
+        statuses = list()  # List of statuses to check finally
         for status in diagnostic_array.status:
             included = False
-            if self.check_include:
+            if self.check_include:  # If only few topics need monitoring
                 for regex in self.include_re:
                     if regex.match(status.name):
                         included = True
                         statuses.append(status)
                         break
-            elif not included and self.check_exclude:
+            elif not included and self.check_exclude:  # If there's a need to exclude a few
                 exclude = False
                 for regex in self.exclude_re:
                     if regex.match(status.name) is not None:
@@ -35,7 +37,7 @@ class AudibleDiagnosticsNode:
                         break
                 if not exclude:
                     statuses.append(status)
-            else:
+            else:  # Defaults to all status messages
                 statuses = diagnostic_array.status
         for s in statuses:
             if s.level == s.WARN:
@@ -49,7 +51,6 @@ class AudibleDiagnosticsNode:
     def spin(self):
         r = rospy.Rate(self.play_rate)
         while not rospy.is_shutdown():
-            rospy.logwarn("(W, E, S):%s" % str(self.latest_status))
             r.sleep()
             if self.latest_status and any(self.latest_status):
                 if cool_mode:
