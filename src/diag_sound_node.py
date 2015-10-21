@@ -5,9 +5,12 @@ import re
 from sound_play.libsoundplay import SoundClient, SoundRequest
 from diagnostic_msgs.msg import DiagnosticArray
 
+startup_audible = False
+ok_rate = 0
+
 class AudibleDiagnosticsNode:
     """Monitors diagnostics and plays audio cues to help easy monitoring"""
-    def __init__(self, topic, include_names, exclude_names, play_rate=10):
+    def __init__(self, topic, include_names, exclude_names, play_rate=0.1):
         self.sound_client = SoundClient()
         self.include_re = [re.compile("^%s.*" % t) for t in include_names]
         self.exclude_re = [re.compile("^%s.*" % t) for t in exclude_names]
@@ -16,6 +19,9 @@ class AudibleDiagnosticsNode:
         self.play_rate = play_rate  # Frequency at which audio cues are made
         self.subscriber = rospy.Subscriber(topic, DiagnosticArray, self.callback)
         self.latest_status = None
+        if ok_rate != 0:
+            self.ok_timer = rospy.timer.Timer(rospy.Duration(1.0/ok_rate), self.ok_timer_callback)
+        self.say_ok = False
 
     def callback(self, diagnostic_array):
         """Main callback for diagnostic messages. Updates status of warnings/errors"""
@@ -48,20 +54,27 @@ class AudibleDiagnosticsNode:
                 stale += 1
         self.latest_status = (warnings, errors, stale)
 
+    def ok_timer_callback(self, *args):
+        self.say_ok = True
+
     def spin(self):
+        if startup_audible:
+            self.sound_client.say('Audible diagnostics started')
+
         r = rospy.Rate(self.play_rate)
         while not rospy.is_shutdown():
             r.sleep()
-            if self.latest_status and any(self.latest_status):
-                if cool_mode:
-                    self.sound_client.play(SoundRequest.NEEDS_PLUGGING_BADLY)
-                else:
+            if self.latest_status is not None:  # Then we have received diagnostics
+                if any(self.latest_status):
                     self.sound_client.say('%s warnings, %s errors, %s stale' % self.latest_status)
-                
+                elif self.say_ok:  # Play sound if everything is ok, once in a while
+                    self.sound_client.say('Systems okay')
+                self.latest_status = None
+            else:  # Then we haven't received diagnostics in the last cycle
+                self.sound_client.say('Warning, no diagnostics received')
 
 
 if __name__ == "__main__":
-    global cool_mode
     rospy.init_node('diagnostic_sound_play')
 
     topic_settings = rospy.get_param('~topic_settings', dict())
@@ -69,6 +82,8 @@ if __name__ == "__main__":
     include_names = topic_settings.get('include', list())
     play_rate = rospy.get_param('~play_rate', 0.1)
     diagnostic_topic = rospy.get_param('~diagnostic_topic', '/diagnostics_agg')
-    cool_mode = rospy.get_param('~cool_mode', False)
+    startup_audible = rospy.get_param('~startup_audible', False)
+    ok_rate = rospy.get_param('~ok_rate', 0)
+
     d = AudibleDiagnosticsNode(diagnostic_topic, include_names, exclude_names, play_rate)
     d.spin()
