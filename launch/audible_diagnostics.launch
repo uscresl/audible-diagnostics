@@ -1,0 +1,5 @@
+<launch>
+  <node name="audible_diagnostics_node" pkg="audible_diagnostics" type="diag_sound_node.py" output="screen">
+    <param name="cool_mode" value="True"/>
+  </node>
+</launch>

@@ -5,22 +5,20 @@ import re
 from sound_play.libsoundplay import SoundClient, SoundRequest
 from diagnostic_msgs.msg import DiagnosticArray
 
-startup_audible = False
-ok_rate = 0
-
 class AudibleDiagnosticsNode:
     """Monitors diagnostics and plays audio cues to help easy monitoring"""
-    def __init__(self, topic, include_names, exclude_names, play_rate=0.1):
+    def __init__(self, topic, include_names, exclude_names, play_interval=10.0, ok_interval=0, startup_audible=False):
         self.sound_client = SoundClient()
         self.include_re = [re.compile("^%s.*" % t) for t in include_names]
         self.exclude_re = [re.compile("^%s.*" % t) for t in exclude_names]
         self.check_include = len(self.include_re) != 0
         self.check_exclude = len(self.exclude_re) != 0
-        self.play_rate = play_rate  # Frequency at which audio cues are made
+        self.play_interval = play_interval  # Frequency at which audio cues are made
+        self.startup_audible = startup_audible
         self.subscriber = rospy.Subscriber(topic, DiagnosticArray, self.callback)
         self.latest_status = None
-        if ok_rate != 0:
-            self.ok_timer = rospy.timer.Timer(rospy.Duration(1.0/ok_rate), self.ok_timer_callback)
+        if ok_interval != 0:
+            self.ok_timer = rospy.timer.Timer(rospy.Duration(ok_interval), self.ok_timer_callback)
         self.say_ok = False
 
     def callback(self, diagnostic_array):
@@ -58,7 +56,8 @@ class AudibleDiagnosticsNode:
         self.say_ok = True
 
     def spin(self):
-        if startup_audible:
+        if self.startup_audible:
+            rospy.sleep(5.0) # Sleep for a few seconds before announcing so nodes can start.
             self.sound_client.say('Audible diagnostics started')
 
         r = rospy.Rate(self.play_rate)
@@ -69,6 +68,7 @@ class AudibleDiagnosticsNode:
                     self.sound_client.say('%s warnings, %s errors, %s stale' % self.latest_status)
                 elif self.say_ok:  # Play sound if everything is ok, once in a while
                     self.sound_client.say('Systems okay')
+                    self.say_ok = False
                 self.latest_status = None
             else:  # Then we haven't received diagnostics in the last cycle
                 self.sound_client.say('Warning, no diagnostics received')
@@ -80,10 +80,10 @@ if __name__ == "__main__":
     topic_settings = rospy.get_param('~topic_settings', dict())
     exclude_names = topic_settings.get('exclude', list())
     include_names = topic_settings.get('include', list())
-    play_rate = rospy.get_param('~play_rate', 0.1)
+    play_interval = rospy.get_param('~play_interval', 10.0)
     diagnostic_topic = rospy.get_param('~diagnostic_topic', '/diagnostics_agg')
     startup_audible = rospy.get_param('~startup_audible', False)
-    ok_rate = rospy.get_param('~ok_rate', 0)
+    ok_interval = rospy.get_param('~ok_interval', 0)
 
-    d = AudibleDiagnosticsNode(diagnostic_topic, include_names, exclude_names, play_rate)
+    d = AudibleDiagnosticsNode(diagnostic_topic, include_names, exclude_names, play_interval=play_interval, startup_audible=startup_audible)
     d.spin()
