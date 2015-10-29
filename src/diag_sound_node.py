@@ -60,7 +60,7 @@ class AudibleDiagnosticsNode:
             rospy.sleep(5.0) # Sleep for a few seconds before announcing so nodes can start.
             self.sound_client.say('Audible diagnostics started')
 
-        r = rospy.Rate(self.play_rate)
+        r = rospy.Rate(1.0/self.play_interval)
         while not rospy.is_shutdown():
             r.sleep()
             if self.latest_status is not None:  # Then we have received diagnostics
@@ -85,5 +85,5 @@ if __name__ == "__main__":
     startup_audible = rospy.get_param('~startup_audible', False)
     ok_interval = rospy.get_param('~ok_interval', 0)
 
-    d = AudibleDiagnosticsNode(diagnostic_topic, include_names, exclude_names, play_interval=play_interval, startup_audible=startup_audible)
+    d = AudibleDiagnosticsNode(diagnostic_topic, include_names, exclude_names, play_interval=play_interval, startup_audible=startup_audible, ok_interval=ok_interval)
     d.spin()
